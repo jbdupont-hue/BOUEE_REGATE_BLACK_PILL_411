@@ -18,17 +18,17 @@ void updateCurrentEstimate(double lat, double lon, bool motorsStopped);
 float readCompass();
 float headingError(float desired, float current);
 
-/* ===================== PIN DEFINITIONS (STM32) ===================== */
+/* ===================== PIN DEFINITIONS (Teensy 4.0) ===================== */
 
-#define PPM_PIN           PA0     // Receiver connection PPM
-#define ESC_PORT_PIN      PB6     // ESC connection for port - babord
-#define ESC_STARBOARD_PIN PB7     // ESC connection for starboard - tribord
-#define LED_GPS           PC13    // LED GPS status - no LED, no fix, blinking LED GPS working, LED steady GPS valid fix
+#define PPM_PIN           2       // Receiver connection PPM (digital input)
+#define ESC_PORT_PIN      3       // ESC connection for port - babord (PWM output)
+#define ESC_STARBOARD_PIN 4       // ESC connection for starboard - tribord (PWM output)
+#define LED_GPS           13      // LED GPS status - built-in LED (no fix = blinking, valid fix = steady on)
+                                  // I2C: SDA = Pin 18, SCL = Pin 19 (auto-configured)
 
-#define GPS_SERIAL SerialGPS        // PA9 TX / PA10 RX
+#define GPS_SERIAL Serial1        // Uses pins 0 (RX1) and 1 (TX1)
 
 /* ===================== GLOBAL OBJECTS ===================== */
-HardwareSerial SerialGPS(USART1);
 
 /* ===================== CONSTANTS ===================== */
 
@@ -125,7 +125,7 @@ void ppmISR() {
 
 void setup() {
   pinMode(LED_GPS, OUTPUT);
-  digitalWrite(LED_GPS, HIGH); // LED off (PC13 inversée)
+  digitalWrite(LED_GPS, LOW); // LED off initially (Teensy 4.0 normal logic)
 
   Serial.begin(115200);       // USB debug
   GPS_SERIAL.begin(GPS_BAUD); // GPS UART
@@ -150,7 +150,7 @@ void setup() {
     gpsLedBlink();
   }
 
-  digitalWrite(LED_GPS, LOW); // FIX OK
+  digitalWrite(LED_GPS, HIGH); // FIX OK (LED on)
 
   targetLat = gps.location.lat();
   targetLon = gps.location.lng();
@@ -338,7 +338,7 @@ void printCurrentDebug() {
 
 void updateGpsLed() {
   if (gps.location.isValid() && gps.hdop.hdop() <= GPS_HDOP_MAX) {
-    digitalWrite(LED_GPS, LOW);
+    digitalWrite(LED_GPS, HIGH); // LED on when GPS fix is valid
   } else {
     gpsLedBlink();
   }
@@ -348,6 +348,6 @@ void gpsLedBlink() {
   if (millis() - ledTimer > 500) {
     ledTimer = millis();
     ledState = !ledState;
-    digitalWrite(LED_GPS, ledState ? LOW : HIGH);
+    digitalWrite(LED_GPS, ledState ? HIGH : LOW); // Normal LED logic for Teensy 4.0
   }
 }
